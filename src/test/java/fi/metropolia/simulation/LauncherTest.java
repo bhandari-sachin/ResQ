@@ -10,6 +10,7 @@ import fi.metropolia.simulation.model.SimulationEngine;
  *
  * With setTraceLevel() you can control the number of diagnostic messages printed to the console.
  */
+// Test class to launch the simulation engine
 public class LauncherTest {
     public static void main(String[] args) {
         Trace.setTraceLevel(Level.INFO);
