@@ -1,0 +1,54 @@
+# ---------------------------------
+# Text files (normalize line endings)
+# ---------------------------------
+* text=auto
+
+# Source code & configs (force LF)
+*.java       text eol=lf
+*.xml        text eol=lf
+*.xsd        text eol=lf
+*.properties text eol=lf
+*.md         text eol=lf
+*.sh         text eol=lf
+*.yml        text eol=lf
+*.yaml       text eol=lf
+
+# Windows scripts (force CRLF)
+*.bat        text eol=crlf
+*.cmd        text eol=crlf
+
+# ---------------------------------
+# Binary files (Git LFS for big ones)
+# ---------------------------------
+# Java artifacts
+*.class      filter=lfs diff=lfs merge=lfs -text
+*.jar        filter=lfs diff=lfs merge=lfs -text
+*.war        filter=lfs diff=lfs merge=lfs -text
+*.ear        filter=lfs diff=lfs merge=lfs -text
+
+# Graphics & media
+*.png        filter=lfs diff=lfs merge=lfs -text
+*.jpg        filter=lfs diff=lfs merge=lfs -text
+*.jpeg       filter=lfs diff=lfs merge=lfs -text
+*.gif        filter=lfs diff=lfs merge=lfs -text
+*.ico        filter=lfs diff=lfs merge=lfs -text
+*.svg        filter=lfs diff=lfs merge=lfs -text
+*.pdf        filter=lfs diff=lfs merge=lfs -text
+
+# Archives & others
+*.zip        filter=lfs diff=lfs merge=lfs -text
+*.gz         filter=lfs diff=lfs merge=lfs -text
+
+# Maven wrapper binaries
+.mvn/wrapper/maven-wrapper.jar filter=lfs diff=lfs merge=lfs -text
+
+# ---------------------------------
+# Merge strategies
+# ---------------------------------
+# Keep both entries in properties when possible
+*.properties merge=union
+
+# ---------------------------------
+# Exclude build artifacts from git archive
+# ---------------------------------
+target/      export-ignore
