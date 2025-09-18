@@ -3,11 +3,11 @@ package fi.metropolia.simulation;
 import fi.metropolia.simulation.framework.Engine;
 import fi.metropolia.simulation.framework.Trace;
 import fi.metropolia.simulation.framework.Trace.Level;
-import fi.metropolia.simulation.model.SimulationEngine;
+import fi.metropolia.simulation.controller.SimulationEngine;
 
 /**
  * Command-line type User Interface
- *
+ * <p>
  * With setTraceLevel() you can control the number of diagnostic messages printed to the console.
  */
 // Test class to launch the simulation engine
