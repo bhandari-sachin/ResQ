@@ -18,7 +18,7 @@ public class LauncherGUI extends Application {
         primaryStage.setTitle("Simulation GUI");
 
         // Create UI components
-        Label welcomeLabel = new Label("Welcome to Metropolia Simulation!");
+        Label welcomeLabel = new Label("Welcome to Metropolia Simu!");
         Button startButton = new Button("Start Simulation");
         Button exitButton = new Button("Exit");
 
