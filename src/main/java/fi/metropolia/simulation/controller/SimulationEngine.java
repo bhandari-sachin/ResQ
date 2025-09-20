@@ -34,7 +34,12 @@ public class SimulationEngine extends Engine {
     // Camp operation statistics
     private int totalSurvivorArrivals = 0;
     private int totalSurvivorsProcessed = 0;
-    private List<Survivor> fullyProcessedSurvivors = new ArrayList<>();
+
+    // Keep ALL survivors as they arrive (for CSV)
+    private final List<Survivor> allSurvivors = new ArrayList<>();
+
+    // Keep fully processed survivors (you already had this)
+    private final List<Survivor> fullyProcessedSurvivors = new ArrayList<>();
 
     public SimulationEngine() {
         this.view = new RescueCampSimulationView();
@@ -60,6 +65,15 @@ public class SimulationEngine extends Engine {
                 new Normal(5, 1), eventList, RescueCampEventType.ADULT_SHELTER_ASSIGNMENT_COMPLETE, "Adult Shelter Assignment");
         familyShelterAssignment = new RescueCampServicePoint(
                 new Normal(8, 2), eventList, RescueCampEventType.FAMILY_SHELTER_ASSIGNMENT_COMPLETE, "Family Shelter Assignment");
+
+        // === Initial staffing ===
+        medicalTreatmentStation.setWorkers(5);
+        registrationDesk.setWorkers(2);
+        communicationCenter.setWorkers(2);
+        suppliesDistributionPoint.setWorkers(2);
+        childShelterAssignment.setWorkers(2);
+        adultShelterAssignment.setWorkers(2);
+        familyShelterAssignment.setWorkers(2);
     }
 
     /**
@@ -142,6 +156,7 @@ public class SimulationEngine extends Engine {
     private void handleNewSurvivorArrival() {
         Survivor newSurvivor = new Survivor();
         totalSurvivorArrivals++;
+        allSurvivors.add(newSurvivor); // <-- record all generated survivors for CSV
         view.displaySurvivorArrival(newSurvivor);
 
         // Register family groups
@@ -219,7 +234,6 @@ public class SimulationEngine extends Engine {
 
     @Override
     protected void tryCEvents() {
-        // Start services if not in progress
         RescueCampServicePoint[] allServicePoints = {
                 medicalTreatmentStation, registrationDesk, communicationCenter, suppliesDistributionPoint,
                 childShelterAssignment, adultShelterAssignment, familyShelterAssignment
@@ -249,12 +263,25 @@ public class SimulationEngine extends Engine {
         );
     }
 
-    // External control methods
-    public void setSimulationDuration(double minutes) {
-        setSimulationTime(minutes);
+    // ---- External control methods ----
+    public void setSimulationDuration(double minutes) { setSimulationTime(minutes); }
+    public void startSimulation() { run(); }
+
+    // ---- NEW: accessors for CSV export ----
+    public List<Survivor> getAllSurvivors() {
+        return Collections.unmodifiableList(allSurvivors);
     }
 
-    public void startSimulation() {
-        run();
+    public List<Survivor> getFullyProcessedSurvivors() {
+        return Collections.unmodifiableList(fullyProcessedSurvivors);
     }
+
+    // ---- worker controls ----
+    public void setMedicalWorkers(int n)       { medicalTreatmentStation.setWorkers(n); }
+    public void setRegistrationWorkers(int n)  { registrationDesk.setWorkers(n); }
+    public void setCommunicationWorkers(int n) { communicationCenter.setWorkers(n); }
+    public void setSuppliesWorkers(int n)      { suppliesDistributionPoint.setWorkers(n); }
+    public void setChildShelterWorkers(int n)  { childShelterAssignment.setWorkers(n); }
+    public void setAdultShelterWorkers(int n)  { adultShelterAssignment.setWorkers(n); }
+    public void setFamilyShelterWorkers(int n) { familyShelterAssignment.setWorkers(n); }
 }

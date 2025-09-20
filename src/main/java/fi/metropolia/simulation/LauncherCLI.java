@@ -1,7 +1,11 @@
 package fi.metropolia.simulation;
 
 import fi.metropolia.simulation.controller.SimulationEngine;
+import fi.metropolia.simulation.csv.CsvExporter;
 import fi.metropolia.simulation.framework.Trace;
+import fi.metropolia.simulation.model.Survivor;
+
+import java.util.List;
 
 /**
  * Main class to run the rescue camp simulation
@@ -15,7 +19,16 @@ public class LauncherCLI {
         // Create and configure rescue camp simulation engine
         SimulationEngine rescueCampSimulation = new SimulationEngine();
 
-        // Set simulation duration (in minutes) - simulate for 8 hours (480 minutes)
+        // --- Set initial staffing ---
+        rescueCampSimulation.setMedicalWorkers(5);
+        rescueCampSimulation.setRegistrationWorkers(2);
+        rescueCampSimulation.setCommunicationWorkers(2);
+        rescueCampSimulation.setSuppliesWorkers(2);
+        rescueCampSimulation.setChildShelterWorkers(2);
+        rescueCampSimulation.setAdultShelterWorkers(2);
+        rescueCampSimulation.setFamilyShelterWorkers(2);
+
+        // Set simulation duration (in minutes)
         double simulationDurationMinutes = 480.0;
         rescueCampSimulation.setSimulationDuration(simulationDurationMinutes);
 
@@ -31,6 +44,11 @@ public class LauncherCLI {
         long simulationStartTime = System.currentTimeMillis();
         rescueCampSimulation.startSimulation();
         long simulationEndTime = System.currentTimeMillis();
+
+        // === NEW: export ALL generated survivors to CSV ===
+        List<Survivor> survivors = rescueCampSimulation.getAllSurvivors();
+        CsvExporter.writeSurvivorsToCsv("survivors.csv", survivors);
+        System.out.println("Exported " + survivors.size() + " survivors to survivors.csv");
 
         System.out.println("\nRescue camp simulation completed successfully!");
         System.out.println("Real-time execution duration: " + (simulationEndTime - simulationStartTime) + " milliseconds");

@@ -6,12 +6,15 @@ import fi.metropolia.simulation.framework.*;
 import java.util.LinkedList;
 
 public class RescueCampServicePoint {
-    private LinkedList<Survivor> survivorQueue = new LinkedList<>();
+    private LinkedList<fi.metropolia.simulation.model.Survivor> survivorQueue = new LinkedList<>();
     private ContinuousGenerator serviceTimeGenerator;
     private EventList campEventList;
     private RescueCampEventType scheduledEventType;
     private boolean serviceInProgress = false;
     private String servicePointName;
+
+    // NEW: number of workers (counters) at this station
+    private int workers = 1;
 
     // Performance statistics data
     private int totalSurvivorsServed = 0;
@@ -23,21 +26,26 @@ public class RescueCampServicePoint {
     // Local variable to track max waiting time during service
     private double localMaxWaitingTime = 0;
 
-    public RescueCampServicePoint(ContinuousGenerator serviceTimeGenerator, EventList campEventList, RescueCampEventType scheduledEventType, String servicePointName) {
+    public RescueCampServicePoint(ContinuousGenerator serviceTimeGenerator, EventList campEventList,
+                                  RescueCampEventType scheduledEventType, String servicePointName) {
         this.serviceTimeGenerator = serviceTimeGenerator;
         this.campEventList = campEventList;
         this.scheduledEventType = scheduledEventType;
         this.servicePointName = servicePointName;
     }
 
-    public void addSurvivorToQueue(Survivor survivor) {
+    // --- NEW: worker controls ---
+    public void setWorkers(int n) { this.workers = Math.max(1, n); }
+    public int getWorkers() { return workers; }
+
+    public void addSurvivorToQueue(fi.metropolia.simulation.model.Survivor survivor) {
         survivorQueue.add(survivor);
         updateMaximumQueueLength();
     }
 
-    public Survivor removeSurvivorFromQueue() {
+    public fi.metropolia.simulation.model.Survivor removeSurvivorFromQueue() {
         serviceInProgress = false;
-        Survivor survivor = survivorQueue.poll();
+        fi.metropolia.simulation.model.Survivor survivor = survivorQueue.poll();
         if (survivor != null) {
             totalSurvivorsServed++;
             double serviceTime = Clock.getInstance().getClock() - survivor.getCampArrivalTime();
@@ -51,17 +59,24 @@ public class RescueCampServicePoint {
     }
 
     public void beginServiceForSurvivor() {
-        if (survivorQueue.isEmpty()) return;
-        Survivor currentSurvivor = survivorQueue.peek();
+        if (serviceInProgress || survivorQueue.isEmpty()) return; // minimal safety
+        fi.metropolia.simulation.model.Survivor currentSurvivor = survivorQueue.peek();
         serviceInProgress = true;
+
         double baseServiceDuration = serviceTimeGenerator.sample();
         double actualServiceDuration = calculateActualServiceTime(currentSurvivor, baseServiceDuration);
+
+        // NEW: speed up service with more workers (simple parallelism approximation)
+        actualServiceDuration = actualServiceDuration / Math.max(1, workers);
+        actualServiceDuration = Math.max(0.0001, actualServiceDuration); // clamp small/negative
+
         recordServiceStartTime(currentSurvivor);
-        Event serviceCompletionEvent = new Event(scheduledEventType, Clock.getInstance().getClock() + actualServiceDuration);
+        Event serviceCompletionEvent =
+                new Event(scheduledEventType, Clock.getInstance().getClock() + actualServiceDuration);
         campEventList.add(serviceCompletionEvent);
     }
 
-    private double calculateActualServiceTime(Survivor survivor, double baseDuration) {
+    private double calculateActualServiceTime(fi.metropolia.simulation.model.Survivor survivor, double baseDuration) {
         double serviceDuration = baseDuration;
         switch (scheduledEventType) {
             case SUPPLIES_DISTRIBUTION_COMPLETE:
@@ -78,7 +93,7 @@ public class RescueCampServicePoint {
         return serviceDuration;
     }
 
-    private void recordServiceStartTime(Survivor survivor) {
+    private void recordServiceStartTime(fi.metropolia.simulation.model.Survivor survivor) {
         double currentTime = Clock.getInstance().getClock();
         double waitingTime = currentTime - survivor.getCampArrivalTime();
         survivor.addWaitingTime(waitingTime);

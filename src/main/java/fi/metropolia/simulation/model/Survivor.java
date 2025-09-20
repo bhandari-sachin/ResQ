@@ -99,19 +99,23 @@ public class Survivor {
      * Business Logic: Add waiting time to the total
      */
     public void addWaitingTime(double waitTime) {
+
         this.totalWaitingTime += waitTime;
     }
 
     // Data Access Methods (Getters)
     public int getSurvivorId() {
+
         return survivorId;
     }
 
     public int getSurvivorAge() {
+
         return survivorAge;
     }
 
     public HealthCondition getHealthCondition() {
+
         return healthCondition;
     }
 
@@ -120,14 +124,17 @@ public class Survivor {
     }
 
     public boolean hasFamily() {
+
         return hasFamily;
     }
 
     public int getFamilyMemberCount() {
+
         return familyMemberCount;
     }
 
     public String getFamilyGroupId() {
+
         return familyGroupId;
     }
 
@@ -144,6 +151,7 @@ public class Survivor {
     }
 
     public boolean requiresMedicalTreatment() {
+
         return requiresMedicalTreatment;
     }
 
