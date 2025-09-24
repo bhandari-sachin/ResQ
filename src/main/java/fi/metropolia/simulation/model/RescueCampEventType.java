@@ -10,21 +10,23 @@ public enum RescueCampEventType implements IEventType {
     // Arrival events
     SURVIVOR_ARRIVAL,
 
-    // Gate processing events
+    // Gate processing events (kept as-is if used elsewhere)
     GATE_PROCESSING_COMPLETE,
 
     // Medical treatment events
-    MEDICAL_TREATMENT_COMPLETE,
+    MEDICAL_TREATMENT_COMPLETE,          // SC-4
 
     // Registration events
-    REGISTRATION_COMPLETE,
+    REGISTRATION_COMPLETE,               // SC-1
 
     // Service events
-    COMMUNICATION_SERVICE_COMPLETE,
-    SUPPLIES_DISTRIBUTION_COMPLETE,
+    COMMUNICATION_SERVICE_COMPLETE,      // SC-2
+    SUPPLIES_DISTRIBUTION_COMPLETE,      // SC-3
+
+    // NEW: Accommodation center
+    ACCOMMODATION_CENTER_COMPLETE,       // SC-5
 
     // Shelter assignment events
-    CHILD_SHELTER_ASSIGNMENT_COMPLETE,
-    ADULT_SHELTER_ASSIGNMENT_COMPLETE,
-    FAMILY_SHELTER_ASSIGNMENT_COMPLETE
+    CHILD_SHELTER_ASSIGNMENT_COMPLETE,   // SC-6
+    ADULT_SHELTER_ASSIGNMENT_COMPLETE    // SC-7
 }

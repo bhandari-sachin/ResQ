@@ -1,18 +1,18 @@
 package fi.metropolia.simulation.framework;
 
 /**
- * Engine implement three-phase simulator. See <a href="https://www.jstor.org/stable/2584330">Three-Phase Simulator</a>
+ * Engine implements a three-phase simulator. See <a href="https://www.jstor.org/stable/2584330">Three-Phase Simulator</a>
  * <p>
  * This is a skeleton of a three-phase simulator. You need to implement abstract methods for your
- * purpose.
+ * simulation’s purpose.
  */
 public abstract class Engine {
     private double simulationTime = 0;    // time when the simulation will be stopped
-    private Clock clock;                // to simplify the code (clock.getClock() instead Clock.getInstance().getClock())
+    private Clock clock;                  // to simplify the code (clock.getClock() instead of Clock.getInstance().getClock())
     protected EventList eventList;        // events to be processed are stored here
 
     /**
-     * Service Points are created in simu.model-package's class inheriting the Engine class
+     * Service Points are created in fi.metropolia.simulation.model-package’s class inheriting the Engine class
      */
     public Engine() {
         clock = Clock.getInstance();    // to improve the speed of the simulation
@@ -29,10 +29,10 @@ public abstract class Engine {
     }
 
     /**
-     * The starting point of the simulator. We will return when the simulation ends.
+     * The starting point of the simulator. Returns when the simulation ends.
      */
     public void run() {
-        initialize(); // creating, e.g., the first event
+        initialize(); // e.g., schedule the first survivor arrival
 
         while (simulate()) {
             Trace.out(Trace.Level.INFO, "\nA-phase: time is " + currentTime());
@@ -43,14 +43,13 @@ public abstract class Engine {
 
             Trace.out(Trace.Level.INFO, "\nC-phase:");
             tryCEvents();
-
         }
 
         results();
     }
 
     /**
-     * Execute all B-events (bounded to time) at the current time removing them from the event list.
+     * Execute all B-events (bound to time) at the current time, removing them from the event list.
      */
     private void runBEvents() {
         while (eventList.getNextEventTime() == clock.getClock()) {
@@ -59,22 +58,22 @@ public abstract class Engine {
     }
 
     /**
-     * @return Earliest event time at the event list
+     * @return Earliest event time in the event list
      */
     private double currentTime() {
         return eventList.getNextEventTime();
     }
 
     /**
-     * @return logical value whether we should continue simulation
+     * @return whether we should continue simulation
      */
     private boolean simulate() {
         return clock.getClock() < simulationTime;
     }
 
     /**
-     * Execute event actions (e.g., removing customer from the queue)
-     * Defined in simu.model-package's class who is inheriting the Engine class
+     * Execute event actions (e.g., removing a survivor from a queue)
+     * Defined in fi.metropolia.simulation.model-package’s class inheriting Engine
      *
      * @param t The event to be executed
      */
@@ -82,20 +81,20 @@ public abstract class Engine {
 
     /**
      * Execute all possible C-events (conditional events)
-     * Defined in simu.model-package's class who is inheriting the Engine class
+     * Defined in fi.metropolia.simulation.model-package’s class inheriting Engine
      */
     protected abstract void tryCEvents();
 
     /**
      * Set all data structures to initial values
-     * Defined in simu.model-package's class who is inheriting the Engine class
+     * Defined in fi.metropolia.simulation.model-package’s class inheriting Engine
      */
     protected abstract void initialize();
 
     /**
      * Show/analyze measurement parameters collected during the simulation.
-     * This method is called at the end of the simulation.
-     * Defined in simu.model-package's class who is inheriting the Engine class
+     * Called at the end of the simulation.
+     * Defined in fi.metropolia.simulation.model-package’s class inheriting Engine
      */
     protected abstract void results();
 }

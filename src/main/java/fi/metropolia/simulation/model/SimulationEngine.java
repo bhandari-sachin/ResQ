@@ -1,8 +1,7 @@
-package fi.metropolia.simulation.controller;
+package fi.metropolia.simulation.model;
 
 import eduni.distributions.*;
 import fi.metropolia.simulation.framework.*;
-import fi.metropolia.simulation.model.*;
 import fi.metropolia.simulation.view.console.RescueCampSimulationView;
 
 import java.util.*;
@@ -20,16 +19,23 @@ public class SimulationEngine extends Engine {
     private ArrivalProcess survivorArrivalProcess;
 
     // Rescue camp service points (Models)
-    private RescueCampServicePoint medicalTreatmentStation;
-    private RescueCampServicePoint registrationDesk;
-    private RescueCampServicePoint communicationCenter;
-    private RescueCampServicePoint suppliesDistributionPoint;
-    private RescueCampServicePoint childShelterAssignment;
-    private RescueCampServicePoint adultShelterAssignment;
-    private RescueCampServicePoint familyShelterAssignment;
+    private RescueCampServicePoint medicalTreatmentStation;   // SC-4
+    private RescueCampServicePoint registrationDesk;          // SC-1
+    private RescueCampServicePoint communicationCenter;       // SC-2
+    private RescueCampServicePoint suppliesDistributionPoint; // SC-3
+    private RescueCampServicePoint accommodationCenter;       // SC-5
+    private RescueCampServicePoint childShelterAssignment;    // SC-6
+    private RescueCampServicePoint adultShelterAssignment;    // SC-7
 
-    // Family tracking system
-    private Map<String, List<Survivor>> familyGroupRegistry = new HashMap<>();
+    // ---- Distribution parameters (defaults preserved) ----
+    private double arrivalMean = 20.0;   // Negexp mean
+    private double regMin = 3.0,   regMax = 5.0;   // Uniform for Registration
+    private double comMin = 3.0,   comMax = 6.0;   // Uniform for Communication
+    private double supMin = 4.0,   supMax = 7.0;   // Uniform for Supplies
+    private double medMin = 10.0,  medMax = 15.0;  // Uniform for Medical
+    private double accMean = 6.0,  accSd  = 1.0;   // Normal for Accommodation
+    private double childMean = 5.0, childSd = 1.0; // Normal for Child Shelter
+    private double adultMean = 5.0, adultSd = 1.0; // Normal for Adult Shelter
 
     // Camp operation statistics
     private int totalSurvivorArrivals = 0;
@@ -38,11 +44,41 @@ public class SimulationEngine extends Engine {
     // Keep ALL survivors as they arrive (for CSV)
     private final List<Survivor> allSurvivors = new ArrayList<>();
 
-    // Keep fully processed survivors (you already had this)
+    // Keep fully processed survivors
     private final List<Survivor> fullyProcessedSurvivors = new ArrayList<>();
 
+    // ---- Constructors ----
+
+    /** Default: uses the same parameters you had before */
     public SimulationEngine() {
         this.view = new RescueCampSimulationView();
+        initializeCampServicePoints();
+        initializeSurvivorArrivalProcess();
+    }
+
+    /** Parameterized: same distributions, caller may override parameters */
+    public SimulationEngine(
+            double arrivalMean,
+            double regMin,   double regMax,
+            double comMin,   double comMax,
+            double supMin,   double supMax,
+            double medMin,   double medMax,
+            double accMean,  double accSd,
+            double childMean, double childSd,
+            double adultMean, double adultSd
+    ) {
+        this.view = new RescueCampSimulationView();
+
+        // Assign overrides (no validation beyond basic assignment for minimal change)
+        this.arrivalMean = arrivalMean;
+        this.regMin = regMin;     this.regMax = regMax;
+        this.comMin = comMin;     this.comMax = comMax;
+        this.supMin = supMin;     this.supMax = supMax;
+        this.medMin = medMin;     this.medMax = medMax;
+        this.accMean = accMean;   this.accSd  = accSd;
+        this.childMean = childMean; this.childSd = childSd;
+        this.adultMean = adultMean; this.adultSd = adultSd;
+
         initializeCampServicePoints();
         initializeSurvivorArrivalProcess();
     }
@@ -52,28 +88,41 @@ public class SimulationEngine extends Engine {
      */
     private void initializeCampServicePoints() {
         medicalTreatmentStation = new RescueCampServicePoint(
-                new Uniform(10, 15), eventList, RescueCampEventType.MEDICAL_TREATMENT_COMPLETE, "Medical Treatment Station");
+                new Uniform(medMin, medMax), eventList,
+                RescueCampEventType.MEDICAL_TREATMENT_COMPLETE, "Medical Treatment Station"); // SC-4
+
         registrationDesk = new RescueCampServicePoint(
-                new Uniform(3, 5), eventList, RescueCampEventType.REGISTRATION_COMPLETE, "Registration Desk");
+                new Uniform(regMin, regMax), eventList,
+                RescueCampEventType.REGISTRATION_COMPLETE, "Registration Desk"); // SC-1
+
         communicationCenter = new RescueCampServicePoint(
-                new Uniform(3, 6), eventList, RescueCampEventType.COMMUNICATION_SERVICE_COMPLETE, "Communication Center");
+                new Uniform(comMin, comMax), eventList,
+                RescueCampEventType.COMMUNICATION_SERVICE_COMPLETE, "Communication Center"); // SC-2
+
         suppliesDistributionPoint = new RescueCampServicePoint(
-                new Uniform(4, 7), eventList, RescueCampEventType.SUPPLIES_DISTRIBUTION_COMPLETE, "Supplies Distribution Point");
+                new Uniform(supMin, supMax), eventList,
+                RescueCampEventType.SUPPLIES_DISTRIBUTION_COMPLETE, "Supplies Distribution Point"); // SC-3
+
+        accommodationCenter = new RescueCampServicePoint(
+                new Normal(accMean, accSd), eventList,
+                RescueCampEventType.ACCOMMODATION_CENTER_COMPLETE, "Accommodation Center"); // SC-5
+
         childShelterAssignment = new RescueCampServicePoint(
-                new Normal(5, 1), eventList, RescueCampEventType.CHILD_SHELTER_ASSIGNMENT_COMPLETE, "Child Shelter Assignment");
+                new Normal(childMean, childSd), eventList,
+                RescueCampEventType.CHILD_SHELTER_ASSIGNMENT_COMPLETE, "Child Shelter Assignment"); // SC-6
+
         adultShelterAssignment = new RescueCampServicePoint(
-                new Normal(5, 1), eventList, RescueCampEventType.ADULT_SHELTER_ASSIGNMENT_COMPLETE, "Adult Shelter Assignment");
-        familyShelterAssignment = new RescueCampServicePoint(
-                new Normal(8, 2), eventList, RescueCampEventType.FAMILY_SHELTER_ASSIGNMENT_COMPLETE, "Family Shelter Assignment");
+                new Normal(adultMean, adultSd), eventList,
+                RescueCampEventType.ADULT_SHELTER_ASSIGNMENT_COMPLETE, "Adult Shelter Assignment"); // SC-7
 
         // === Initial staffing ===
         medicalTreatmentStation.setWorkers(5);
         registrationDesk.setWorkers(2);
         communicationCenter.setWorkers(2);
         suppliesDistributionPoint.setWorkers(2);
+        accommodationCenter.setWorkers(2);
         childShelterAssignment.setWorkers(2);
         adultShelterAssignment.setWorkers(2);
-        familyShelterAssignment.setWorkers(2);
     }
 
     /**
@@ -81,8 +130,9 @@ public class SimulationEngine extends Engine {
      */
     private void initializeSurvivorArrivalProcess() {
         int seed = (int) (System.currentTimeMillis() % Integer.MAX_VALUE);
-        ContinuousGenerator survivorArrivalTimeGenerator = new Negexp(20, seed);
-        survivorArrivalProcess = new ArrivalProcess(survivorArrivalTimeGenerator, eventList, RescueCampEventType.SURVIVOR_ARRIVAL);
+        ContinuousGenerator survivorArrivalTimeGenerator = new Negexp(arrivalMean, seed);
+        survivorArrivalProcess = new ArrivalProcess(
+                survivorArrivalTimeGenerator, eventList, RescueCampEventType.SURVIVOR_ARRIVAL);
     }
 
     @Override
@@ -101,7 +151,7 @@ public class SimulationEngine extends Engine {
                 handleNewSurvivorArrival();
                 break;
 
-            case MEDICAL_TREATMENT_COMPLETE:
+            case MEDICAL_TREATMENT_COMPLETE: // SC-4 -> SC-1
                 survivor = medicalTreatmentStation.removeSurvivorFromQueue();
                 if (survivor != null) {
                     view.displaySurvivorProgress(survivor, "Medical Treatment Complete");
@@ -109,7 +159,7 @@ public class SimulationEngine extends Engine {
                 }
                 break;
 
-            case REGISTRATION_COMPLETE:
+            case REGISTRATION_COMPLETE: // SC-1 -> SC-2 (adults needing comms) or SC-3
                 survivor = registrationDesk.removeSurvivorFromQueue();
                 if (survivor != null) {
                     view.displaySurvivorProgress(survivor, "Registration Complete");
@@ -117,7 +167,7 @@ public class SimulationEngine extends Engine {
                 }
                 break;
 
-            case COMMUNICATION_SERVICE_COMPLETE:
+            case COMMUNICATION_SERVICE_COMPLETE: // SC-2 -> SC-3
                 survivor = communicationCenter.removeSurvivorFromQueue();
                 if (survivor != null) {
                     view.displaySurvivorProgress(survivor, "Communication Service Complete");
@@ -125,27 +175,37 @@ public class SimulationEngine extends Engine {
                 }
                 break;
 
-            case SUPPLIES_DISTRIBUTION_COMPLETE:
+            case SUPPLIES_DISTRIBUTION_COMPLETE: // SC-3 -> SC-5
                 survivor = suppliesDistributionPoint.removeSurvivorFromQueue();
                 if (survivor != null) {
                     view.displaySurvivorProgress(survivor, "Supplies Distribution Complete");
-                    assignSurvivorToShelter(survivor);
+                    accommodationCenter.addSurvivorToQueue(survivor);
+                    view.displayServiceAssignment(survivor, "Accommodation Center");
                 }
                 break;
 
-            case CHILD_SHELTER_ASSIGNMENT_COMPLETE:
+            case ACCOMMODATION_CENTER_COMPLETE: // SC-5 -> SC-6/SC-7 (by age)
+                survivor = accommodationCenter.removeSurvivorFromQueue();
+                if (survivor != null) {
+                    view.displaySurvivorProgress(survivor, "Accommodation Center Complete");
+                    if (survivor.getAgeCategory() == Survivor.AgeCategory.CHILD) {
+                        childShelterAssignment.addSurvivorToQueue(survivor);
+                        view.displayServiceAssignment(survivor, "Child Shelter Assignment");
+                    } else {
+                        adultShelterAssignment.addSurvivorToQueue(survivor);
+                        view.displayServiceAssignment(survivor, "Adult Shelter Assignment");
+                    }
+                }
+                break;
+
+            case CHILD_SHELTER_ASSIGNMENT_COMPLETE: // SC-6 -> done
                 survivor = childShelterAssignment.removeSurvivorFromQueue();
                 if (survivor != null) completeSurvivorProcessing(survivor);
                 break;
 
-            case ADULT_SHELTER_ASSIGNMENT_COMPLETE:
+            case ADULT_SHELTER_ASSIGNMENT_COMPLETE: // SC-7 -> done
                 survivor = adultShelterAssignment.removeSurvivorFromQueue();
                 if (survivor != null) completeSurvivorProcessing(survivor);
-                break;
-
-            case FAMILY_SHELTER_ASSIGNMENT_COMPLETE:
-                survivor = familyShelterAssignment.removeSurvivorFromQueue();
-                if (survivor != null) handleFamilyShelterAssignmentCompletion(survivor);
                 break;
         }
     }
@@ -156,21 +216,15 @@ public class SimulationEngine extends Engine {
     private void handleNewSurvivorArrival() {
         Survivor newSurvivor = new Survivor();
         totalSurvivorArrivals++;
-        allSurvivors.add(newSurvivor); // <-- record all generated survivors for CSV
+        allSurvivors.add(newSurvivor); // record all generated survivors for CSV
         view.displaySurvivorArrival(newSurvivor);
 
-        // Register family groups
-        if (newSurvivor.hasFamily()) {
-            String familyId = newSurvivor.getFamilyGroupId();
-            familyGroupRegistry.computeIfAbsent(familyId, k -> new ArrayList<>()).add(newSurvivor);
-        }
-
-        // Route based on health condition
+        // Route based on requirement-derived medical need (children always true; adults if injured)
         if (newSurvivor.requiresMedicalTreatment()) {
-            medicalTreatmentStation.addSurvivorToQueue(newSurvivor);
+            medicalTreatmentStation.addSurvivorToQueue(newSurvivor); // SC-4
             view.displayServiceAssignment(newSurvivor, "Medical Treatment Station");
         } else {
-            registrationDesk.addSurvivorToQueue(newSurvivor);
+            registrationDesk.addSurvivorToQueue(newSurvivor); // SC-1
             view.displayServiceAssignment(newSurvivor, "Registration Desk");
         }
 
@@ -181,44 +235,13 @@ public class SimulationEngine extends Engine {
      * Route survivor after registration
      */
     private void routeSurvivorAfterRegistration(Survivor survivor) {
-        if (survivor.requestsCommunicationService()) {
-            communicationCenter.addSurvivorToQueue(survivor);
+        // Only adults may visit the Communication Center (SC-2) if they request it; children go to Supplies (SC-3)
+        if (survivor.getAgeCategory() == Survivor.AgeCategory.ADULT && survivor.requestsCommunicationService()) {
+            communicationCenter.addSurvivorToQueue(survivor); // SC-2
             view.displayServiceAssignment(survivor, "Communication Center");
         } else {
-            suppliesDistributionPoint.addSurvivorToQueue(survivor);
+            suppliesDistributionPoint.addSurvivorToQueue(survivor); // SC-3
             view.displayServiceAssignment(survivor, "Supplies Distribution Point");
-        }
-    }
-
-    /**
-     * Assign survivor to shelter
-     */
-    private void assignSurvivorToShelter(Survivor survivor) {
-        if (survivor.hasFamily()) {
-            familyShelterAssignment.addSurvivorToQueue(survivor);
-            view.displayServiceAssignment(survivor, "Family Shelter Assignment");
-        } else if (survivor.getAgeCategory() == Survivor.AgeCategory.CHILD) {
-            childShelterAssignment.addSurvivorToQueue(survivor);
-            view.displayServiceAssignment(survivor, "Child Shelter Assignment");
-        } else {
-            adultShelterAssignment.addSurvivorToQueue(survivor);
-            view.displayServiceAssignment(survivor, "Adult Shelter Assignment");
-        }
-    }
-
-    /**
-     * Handle family shelter completion
-     */
-    private void handleFamilyShelterAssignmentCompletion(Survivor survivor) {
-        if (survivor.hasFamily()) {
-            String familyId = survivor.getFamilyGroupId();
-            List<Survivor> familyMembers = familyGroupRegistry.get(familyId);
-            if (familyMembers != null) {
-                for (Survivor member : familyMembers) completeSurvivorProcessing(member);
-                familyGroupRegistry.remove(familyId);
-            }
-        } else {
-            completeSurvivorProcessing(survivor);
         }
     }
 
@@ -236,7 +259,7 @@ public class SimulationEngine extends Engine {
     protected void tryCEvents() {
         RescueCampServicePoint[] allServicePoints = {
                 medicalTreatmentStation, registrationDesk, communicationCenter, suppliesDistributionPoint,
-                childShelterAssignment, adultShelterAssignment, familyShelterAssignment
+                accommodationCenter, childShelterAssignment, adultShelterAssignment
         };
 
         for (RescueCampServicePoint sp : allServicePoints) {
@@ -251,7 +274,7 @@ public class SimulationEngine extends Engine {
     protected void results() {
         List<RescueCampServicePoint> allServicePoints = Arrays.asList(
                 medicalTreatmentStation, registrationDesk, communicationCenter, suppliesDistributionPoint,
-                childShelterAssignment, adultShelterAssignment, familyShelterAssignment
+                accommodationCenter, childShelterAssignment, adultShelterAssignment
         );
 
         view.displayFinalResults(
@@ -267,21 +290,16 @@ public class SimulationEngine extends Engine {
     public void setSimulationDuration(double minutes) { setSimulationTime(minutes); }
     public void startSimulation() { run(); }
 
-    // ---- NEW: accessors for CSV export ----
-    public List<Survivor> getAllSurvivors() {
-        return Collections.unmodifiableList(allSurvivors);
-    }
-
-    public List<Survivor> getFullyProcessedSurvivors() {
-        return Collections.unmodifiableList(fullyProcessedSurvivors);
-    }
+    // ---- accessors for CSV export ----
+    public List<Survivor> getAllSurvivors() { return Collections.unmodifiableList(allSurvivors); }
+    public List<Survivor> getFullyProcessedSurvivors() { return Collections.unmodifiableList(fullyProcessedSurvivors); }
 
     // ---- worker controls ----
     public void setMedicalWorkers(int n)       { medicalTreatmentStation.setWorkers(n); }
     public void setRegistrationWorkers(int n)  { registrationDesk.setWorkers(n); }
     public void setCommunicationWorkers(int n) { communicationCenter.setWorkers(n); }
     public void setSuppliesWorkers(int n)      { suppliesDistributionPoint.setWorkers(n); }
+    public void setAccommodationWorkers(int n) { accommodationCenter.setWorkers(n); }
     public void setChildShelterWorkers(int n)  { childShelterAssignment.setWorkers(n); }
     public void setAdultShelterWorkers(int n)  { adultShelterAssignment.setWorkers(n); }
-    public void setFamilyShelterWorkers(int n) { familyShelterAssignment.setWorkers(n); }
 }

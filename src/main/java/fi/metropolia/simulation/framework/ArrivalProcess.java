@@ -3,8 +3,8 @@ package fi.metropolia.simulation.framework;
 import eduni.distributions.ContinuousGenerator;
 
 /**
- * ArrivalProcess produces the time when next customer arrivals. This is based on the
- * current time and random number
+ * ArrivalProcess produces the time when the next survivor arrives.
+ * This is based on the current clock time and a random generator.
  */
 public class ArrivalProcess {
     private ContinuousGenerator generator;
@@ -12,11 +12,11 @@ public class ArrivalProcess {
     private IEventType type;
 
     /**
-     * Create the service point with a waiting queue.
+     * Create the arrival process for survivors.
      *
-     * @param g    Random number generator for customer arrival time simulation
-     * @param tl   Simulator event list, needed for the insertion of customer arrival event
-     * @param type Event type for the customer arrival event
+     * @param g    Random number generator for survivor inter-arrival times
+     * @param tl   Simulator event list, used to insert survivor arrival events
+     * @param type Event type for survivor arrival
      */
     public ArrivalProcess(ContinuousGenerator g, EventList tl, IEventType type) {
         this.generator = g;
@@ -25,7 +25,7 @@ public class ArrivalProcess {
     }
 
     /**
-     * Create a new customer (Generate customer arrival event and put it to the event list)
+     * Generate the next survivor arrival event and put it on the event list.
      */
     public void generateNextEvent() {
         Event t = new Event(type, Clock.getInstance().getClock() + generator.sample());

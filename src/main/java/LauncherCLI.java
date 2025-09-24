@@ -1,6 +1,4 @@
-package fi.metropolia.simulation;
-
-import fi.metropolia.simulation.controller.SimulationEngine;
+import fi.metropolia.simulation.model.SimulationEngine; // FIXED: correct package
 import fi.metropolia.simulation.csv.CsvExporter;
 import fi.metropolia.simulation.framework.Trace;
 import fi.metropolia.simulation.model.Survivor;
@@ -20,13 +18,14 @@ public class LauncherCLI {
         SimulationEngine rescueCampSimulation = new SimulationEngine();
 
         // --- Set initial staffing ---
-        rescueCampSimulation.setMedicalWorkers(5);
-        rescueCampSimulation.setRegistrationWorkers(2);
+        rescueCampSimulation.setMedicalWorkers(6);
+        rescueCampSimulation.setRegistrationWorkers(3);
         rescueCampSimulation.setCommunicationWorkers(2);
         rescueCampSimulation.setSuppliesWorkers(2);
+        rescueCampSimulation.setAccommodationWorkers(2); // NEW: SC-5
         rescueCampSimulation.setChildShelterWorkers(2);
         rescueCampSimulation.setAdultShelterWorkers(2);
-        rescueCampSimulation.setFamilyShelterWorkers(2);
+        // REMOVED: family shelter workers (no-family scenario)
 
         // Set simulation duration (in minutes)
         double simulationDurationMinutes = 480.0;
@@ -45,7 +44,7 @@ public class LauncherCLI {
         rescueCampSimulation.startSimulation();
         long simulationEndTime = System.currentTimeMillis();
 
-        // === NEW: export ALL generated survivors to CSV ===
+        // Export ALL generated survivors to CSV
         List<Survivor> survivors = rescueCampSimulation.getAllSurvivors();
         CsvExporter.writeSurvivorsToCsv("survivors.csv", survivors);
         System.out.println("Exported " + survivors.size() + " survivors to survivors.csv");

@@ -27,7 +27,8 @@ public class Trace {
         ERR
     }
 
-    private static Level traceLevel;        // current severity level filtering
+    // Default to INFO to avoid NPE if out(...) is called before setTraceLevel(...)
+    private static Level traceLevel = Level.INFO;
 
     /**
      * Set the filtering level of the diagnostic messages
@@ -35,7 +36,7 @@ public class Trace {
      * @param lvl filtering level. Severity level messages lower than this filtering level are not printed
      */
     public static void setTraceLevel(Level lvl) {
-        traceLevel = lvl;
+        traceLevel = (lvl != null) ? lvl : Level.INFO;
     }
 
     /**
@@ -45,7 +46,9 @@ public class Trace {
      * @param txt diagnostic message to be printed
      */
     public static void out(Level lvl, String txt) {
-        if (lvl.ordinal() >= traceLevel.ordinal()) {
+        // Null-safe: treat null lvl as INFO
+        Level messageLevel = (lvl != null) ? lvl : Level.INFO;
+        if (messageLevel.ordinal() >= traceLevel.ordinal()) {
             System.out.println(txt);
         }
     }

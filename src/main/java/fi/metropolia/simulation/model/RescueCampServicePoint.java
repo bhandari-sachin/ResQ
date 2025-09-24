@@ -13,7 +13,7 @@ public class RescueCampServicePoint {
     private boolean serviceInProgress = false;
     private String servicePointName;
 
-    // NEW: number of workers (counters) at this station
+    // number of workers (counters) at this station
     private int workers = 1;
 
     // Performance statistics data
@@ -34,7 +34,7 @@ public class RescueCampServicePoint {
         this.servicePointName = servicePointName;
     }
 
-    // --- NEW: worker controls ---
+    // --- worker controls ---
     public void setWorkers(int n) { this.workers = Math.max(1, n); }
     public int getWorkers() { return workers; }
 
@@ -66,7 +66,7 @@ public class RescueCampServicePoint {
         double baseServiceDuration = serviceTimeGenerator.sample();
         double actualServiceDuration = calculateActualServiceTime(currentSurvivor, baseServiceDuration);
 
-        // NEW: speed up service with more workers (simple parallelism approximation)
+        // speed up service with more workers (simple parallelism approximation)
         actualServiceDuration = actualServiceDuration / Math.max(1, workers);
         actualServiceDuration = Math.max(0.0001, actualServiceDuration); // clamp small/negative
 
@@ -79,15 +79,17 @@ public class RescueCampServicePoint {
     private double calculateActualServiceTime(fi.metropolia.simulation.model.Survivor survivor, double baseDuration) {
         double serviceDuration = baseDuration;
         switch (scheduledEventType) {
+            // Supplies no longer scales with family size (no-family scenario)
             case SUPPLIES_DISTRIBUTION_COMPLETE:
-                if (survivor.hasFamily()) serviceDuration += survivor.getFamilyMemberCount() - 1;
+                // keep generator-driven time
                 break;
-            case FAMILY_SHELTER_ASSIGNMENT_COMPLETE:
-                serviceDuration = survivor.hasFamily() ? 8 + survivor.getFamilyMemberCount() : 8;
-                break;
+            // Family shelter removed; keep fixed 5 for child/adult shelters
             case CHILD_SHELTER_ASSIGNMENT_COMPLETE:
             case ADULT_SHELTER_ASSIGNMENT_COMPLETE:
                 serviceDuration = 5;
+                break;
+            // Accommodation center uses its generator (no override needed)
+            default:
                 break;
         }
         return serviceDuration;
@@ -113,10 +115,16 @@ public class RescueCampServicePoint {
             case SUPPLIES_DISTRIBUTION_COMPLETE:
                 survivor.setSuppliesDistributionStartTime(currentTime);
                 break;
+            case ACCOMMODATION_CENTER_COMPLETE:
+                survivor.setAccommodationCenterStartTime(currentTime);
+                break;
             case CHILD_SHELTER_ASSIGNMENT_COMPLETE:
+                survivor.setChildShelterAssignmentStartTime(currentTime);
+                break;
             case ADULT_SHELTER_ASSIGNMENT_COMPLETE:
-            case FAMILY_SHELTER_ASSIGNMENT_COMPLETE:
-                survivor.setShelterAssignmentStartTime(currentTime);
+                survivor.setAdultShelterAssignmentStartTime(currentTime);
+                break;
+            default:
                 break;
         }
     }
