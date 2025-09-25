@@ -18,8 +18,8 @@ public class LauncherCLI {
         SimulationEngine rescueCampSimulation = new SimulationEngine();
 
         // --- Set initial staffing ---
-        rescueCampSimulation.setMedicalWorkers(6);
-        rescueCampSimulation.setRegistrationWorkers(3);
+        rescueCampSimulation.setMedicalWorkers(5);
+        rescueCampSimulation.setRegistrationWorkers(2);
         rescueCampSimulation.setCommunicationWorkers(2);
         rescueCampSimulation.setSuppliesWorkers(2);
         rescueCampSimulation.setAccommodationWorkers(2); // NEW: SC-5

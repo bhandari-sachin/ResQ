@@ -7,9 +7,9 @@ import eduni.distributions.ContinuousGenerator;
  * This is based on the current clock time and a random generator.
  */
 public class ArrivalProcess {
-    private ContinuousGenerator generator;
-    private EventList eventList;
-    private IEventType type;
+    private final ContinuousGenerator generator;
+    private final EventList eventList;
+    private final IEventType type;
 
     /**
      * Create the arrival process for survivors.

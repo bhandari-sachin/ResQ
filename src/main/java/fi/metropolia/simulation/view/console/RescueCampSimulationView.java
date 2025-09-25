@@ -1,5 +1,7 @@
 package fi.metropolia.simulation.view.console;
 
+
+
 import fi.metropolia.simulation.framework.Trace;
 import fi.metropolia.simulation.model.*;
 
@@ -19,13 +21,14 @@ public class RescueCampSimulationView {
     }
 
     public void displaySurvivorArrival(Survivor survivor) {
-        String familyInfo = survivor.hasFamily() ? ", Family size: " + survivor.getFamilyMemberCount() : ", Individual survivor";
-        String message = String.format("NEW ARRIVAL: Survivor #%d arrived at camp at %.2f minutes - Age: %d, Health: %s%s",
+        String message = String.format(
+                "NEW ARRIVAL: Survivor #%d arrived at camp at %.2f minutes - Age: %d (%s), Health: %s",
                 survivor.getSurvivorId(),
                 survivor.getCampArrivalTime(),
                 survivor.getSurvivorAge(),
-                survivor.getHealthCondition(),
-                familyInfo);
+                survivor.getAgeCategory(),
+                survivor.getHealthCondition()
+        );
         System.out.println(message);
         Trace.out(Trace.Level.INFO, message);
     }
@@ -48,7 +51,9 @@ public class RescueCampSimulationView {
     }
 
     public void displaySurvivorCompletion(Survivor survivor) {
-        System.out.println(String.format("*** SETTLEMENT COMPLETE: Survivor #%d successfully settled in rescue camp ***", survivor.getSurvivorId()));
+        System.out.println(String.format(
+                "*** SETTLEMENT COMPLETE: Survivor #%d successfully settled in rescue camp ***",
+                survivor.getSurvivorId()));
         displaySurvivorDetailedReport(survivor);
     }
 
@@ -60,7 +65,7 @@ public class RescueCampSimulationView {
         System.out.println("Total waiting time: " + String.format("%.2f", survivor.getTotalWaitingTime()) + " minutes");
         System.out.println("Age: " + survivor.getSurvivorAge() + " years (" + survivor.getAgeCategory() + ")");
         System.out.println("Health condition: " + survivor.getHealthCondition());
-        System.out.println("Family status: " + (survivor.hasFamily() ? "Has family (size: " + survivor.getFamilyMemberCount() + ")" : "Individual"));
+        // Family status removed (no-family scenario)
         System.out.println("Services required: Medical(" + survivor.requiresMedicalTreatment() + "), Communication(" + survivor.requestsCommunicationService() + ")");
         System.out.println("-".repeat(50));
     }
@@ -94,7 +99,8 @@ public class RescueCampSimulationView {
         Trace.out(Trace.Level.INFO, "Overall simulation statistics displayed");
     }
 
-    public void displayFinalResults(double currentTime, int totalArrivals, int totalProcessed, List<Survivor> survivors, List<RescueCampServicePoint> servicePoints) {
+    public void displayFinalResults(double currentTime, int totalArrivals, int totalProcessed,
+                                    List<Survivor> survivors, List<RescueCampServicePoint> servicePoints) {
         System.out.println("\n=== SIMULATION COMPLETE ===");
         System.out.println("Simulation time: " + String.format("%.2f", currentTime) + " minutes");
         System.out.println("Total survivors arrived: " + totalArrivals);
@@ -114,3 +120,4 @@ public class RescueCampSimulationView {
         Trace.out(Trace.Level.INFO, "Simulation final results displayed.");
     }
 }
+
