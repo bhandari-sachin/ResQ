@@ -1,0 +1,81 @@
+/* ===========================
+   Global Look & Feel
+   =========================== */
+.root {
+    -fx-font-family: "Segoe UI", "Arial", sans-serif;
+    -fx-font-size: 14px;
+    -fx-background-color: #f4f4f4; /* light background for control panel */
+}
+
+/* ===========================
+   Labels
+   =========================== */
+.label {
+    -fx-text-fill: #333333;       /* dark grey for readability */
+    -fx-font-weight: normal;
+}
+
+/* Titles inside TitledPane */
+.titled-pane > .title {
+    -fx-background-color: #e0e0e0;
+    -fx-font-weight: bold;
+    -fx-padding: 6 8;
+}
+
+/* ===========================
+   TextFields
+   =========================== */
+.text-field {
+    -fx-background-color: #ffffff, #e0e0e0, #ffffff;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-padding: 4 8;
+    -fx-border-color: #cccccc;
+    -fx-border-width: 1;
+    -fx-text-fill: #333333;
+    -fx-prompt-text-fill: #888888;
+}
+
+.text-field:focused {
+    -fx-border-color: #2196F3; /* blue highlight when active */
+    -fx-background-color: #ffffff;
+}
+
+/* ===========================
+   Buttons (already styled)
+   =========================== */
+.button {
+    -fx-text-fill: white;
+    -fx-background-radius: 12;
+    -fx-padding: 6 12;
+    -fx-cursor: hand;
+}
+
+/* Start (green) */
+#btnStart { -fx-background-color: #4CAF50; }
+#btnStart:hover { -fx-background-color: #45A049; }
+
+/* Pause (orange) */
+#btnPause { -fx-background-color: #FF9800; }
+#btnPause:hover { -fx-background-color: #FB8C00; }
+
+/* Step (blue) */
+#btnStep { -fx-background-color: #2196F3; }
+#btnStep:hover { -fx-background-color: #1976D2; }
+
+/* Stop (red) */
+#btnStop { -fx-background-color: #F44336; }
+#btnStop:hover { -fx-background-color: #D32F2F; }
+
+/* Speed up (purple) */
+#btnFaster { -fx-background-color: #9C27B0; }
+#btnFaster:hover { -fx-background-color: #7B1FA2; }
+
+/* Slow down (brown) */
+#btnSlower { -fx-background-color: #795548; }
+#btnSlower:hover { -fx-background-color: #5D4037; }
+
+/* Export CSV (teal) */
+#btnExport { -fx-background-color: #009688; }
+#btnExport:hover { -fx-background-color: #00796B; }

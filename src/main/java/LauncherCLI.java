@@ -1,9 +1,5 @@
 import fi.metropolia.simulation.model.SimulationEngine; // FIXED: correct package
-import fi.metropolia.simulation.csv.CsvExporter;
 import fi.metropolia.simulation.framework.Trace;
-import fi.metropolia.simulation.model.Survivor;
-
-import java.util.List;
 
 /**
  * Main class to run the rescue camp simulation
@@ -45,9 +41,9 @@ public class LauncherCLI {
         long simulationEndTime = System.currentTimeMillis();
 
         // Export ALL generated survivors to CSV
-        List<Survivor> survivors = rescueCampSimulation.getAllSurvivors();
-        CsvExporter.writeSurvivorsToCsv("survivors.csv", survivors);
-        System.out.println("Exported " + survivors.size() + " survivors to survivors.csv");
+        //List<Survivor> survivors = rescueCampSimulation.getAllSurvivors();
+        //CsvExporter.writeSurvivorsToCsv("survivors.csv", survivors);
+        //System.out.println("Exported " + survivors.size() + " survivors to survivors.csv");
 
         System.out.println("\nRescue camp simulation completed successfully!");
         System.out.println("Real-time execution duration: " + (simulationEndTime - simulationStartTime) + " milliseconds");

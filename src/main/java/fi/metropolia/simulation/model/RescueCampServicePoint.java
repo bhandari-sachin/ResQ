@@ -5,175 +5,120 @@ import fi.metropolia.simulation.framework.Clock;
 import fi.metropolia.simulation.framework.Event;
 import fi.metropolia.simulation.framework.EventList;
 
-import java.util.LinkedList;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
+import java.util.*;
 
+/**
+ * Represents a single service point in the rescue camp.
+ * Manages its queue, worker capacity, schedules completion events,
+ * and keeps simple statistics used by the console/GUI views.
+ */
 public class RescueCampServicePoint {
-    private final LinkedList<Survivor> survivorQueue = new LinkedList<>();
+
     private final ContinuousGenerator serviceTimeGenerator;
-    private final EventList campEventList;
-    private final RescueCampEventType scheduledEventType;
-    private boolean serviceInProgress = false;
-    private final String servicePointName;
+    private final EventList eventList;
+    private final RescueCampEventType completionEventType;
+    private final String name;
 
     private int workers = 1;
+    private int busyWorkers = 0;
 
-    // Stats
-    private int totalSurvivorsServed = 0;
-    private double cumulativeServiceTime = 0;
-    private double cumulativeWaitingTime = 0;
-    private int maximumQueueLength = 0;
-    private double maxWaitingTimeObserved = 0;
-    private double localMaxWaitingTime = 0;
+    // Queue of survivors waiting to be served
+    private final Queue<Survivor> queue = new LinkedList<>();
+    // When each survivor entered this service-point queue
+    private final Map<Survivor, Double> enqueueTimes = new HashMap<>();
 
-    // CSV file path
-    private static final Path ASSIGNMENT_CSV = Path.of("survivor_assignments.csv");
+    // ---- Stats (queried by views) ----
+    private double maxWaitingTime = 0.0; // minutes
+    private double sumServiceTime = 0.0; // minutes
+    private int totalServed = 0;
 
     public RescueCampServicePoint(ContinuousGenerator serviceTimeGenerator,
-                                  EventList campEventList,
-                                  RescueCampEventType scheduledEventType,
-                                  String servicePointName) {
+                                  EventList eventList,
+                                  RescueCampEventType completionEventType,
+                                  String name) {
         this.serviceTimeGenerator = serviceTimeGenerator;
-        this.campEventList = campEventList;
-        this.scheduledEventType = scheduledEventType;
-        this.servicePointName = servicePointName;
+        this.eventList = eventList;
+        this.completionEventType = completionEventType;
+        this.name = name;
     }
 
-    // Worker controls
-    public void setWorkers(int n) { this.workers = Math.max(1, n); }
+    /* ------------ configuration ------------ */
+
+    public void setWorkers(int workers) { this.workers = Math.max(0, workers); }
     public int getWorkers() { return workers; }
+    public String getServicePointName() { return name; }     // used by view
+    public String getName() { return name; }                 // kept for any existing calls
+
+    /* ------------ queue ops ------------ */
 
     public void addSurvivorToQueue(Survivor survivor) {
-        survivorQueue.add(survivor);
-        updateMaximumQueueLength();
+        queue.add(survivor);
+        enqueueTimes.put(survivor, Clock.getInstance().getClock());
     }
 
-    public Survivor removeSurvivorFromQueue() {
-        serviceInProgress = false;
-        Survivor survivor = survivorQueue.poll();
-        if (survivor != null) {
-            totalSurvivorsServed++;
-            double serviceTime = Clock.getInstance().getClock() - survivor.getCampArrivalTime();
-            cumulativeServiceTime += serviceTime;
-            double waitingTime = survivor.getTotalWaitingTime();
-            cumulativeWaitingTime += waitingTime;
-            if (waitingTime > maxWaitingTimeObserved) maxWaitingTimeObserved = waitingTime;
-            if (waitingTime > localMaxWaitingTime) localMaxWaitingTime = waitingTime;
-        }
-        return survivor;
-    }
+    public boolean hasSurvivorsInQueue() { return !queue.isEmpty(); }
+    public int getCurrentQueueLength() { return queue.size(); }  // used by view
+    public boolean isServiceInProgress() { return busyWorkers > 0; }
+    public int getBusyWorkers() { return busyWorkers; }
 
+    /**
+     * Start service for the head of the queue if a worker is free,
+     * compute waiting time for that survivor (record to survivor and stats),
+     * and schedule a completion event.
+     */
     public void beginServiceForSurvivor() {
-        if (serviceInProgress || survivorQueue.isEmpty()) return;
-        Survivor currentSurvivor = survivorQueue.peek();
-        serviceInProgress = true;
+        if (busyWorkers >= workers || queue.isEmpty()) return;
 
-        double baseServiceDuration = serviceTimeGenerator.sample();
-        double actualServiceDuration = calculateActualServiceTime(currentSurvivor, baseServiceDuration);
+        Survivor survivor = queue.peek(); // keep in queue until completion
+        if (survivor == null) return;
 
-        actualServiceDuration = actualServiceDuration / Math.max(1, workers);
-        actualServiceDuration = Math.max(0.0001, actualServiceDuration);
+        busyWorkers++;
 
-        recordServiceStartTime(currentSurvivor);
-        Event serviceCompletionEvent =
-                new Event(scheduledEventType, Clock.getInstance().getClock() + actualServiceDuration);
-        campEventList.add(serviceCompletionEvent);
-    }
-
-    private double calculateActualServiceTime(Survivor survivor, double baseDuration) {
-        double serviceDuration = baseDuration;
-        switch (scheduledEventType) {
-            case CHILD_SHELTER_ASSIGNMENT_COMPLETE:
-            case ADULT_SHELTER_ASSIGNMENT_COMPLETE:
-                serviceDuration = 5;
-                break;
-            default:
-                break;
+        // Compute waiting time for this survivor at this service point
+        double now = Clock.getInstance().getClock();
+        Double enq = enqueueTimes.remove(survivor);
+        if (enq != null) {
+            double waited = Math.max(0.0, now - enq);
+            // Update per-point max
+            if (waited > maxWaitingTime) maxWaitingTime = waited;
+            // IMPORTANT: also accumulate into the survivor so CSV column "waiting_time" is non-zero
+            survivor.addWaitingTime(waited);
         }
-        return serviceDuration;
+
+        // Draw service time and schedule completion
+        double serviceTime = serviceTimeGenerator.sample();
+        sumServiceTime += serviceTime;
+
+        double completionTime = now + serviceTime;
+        // EventList API is add(Event)
+        eventList.add(new Event(completionEventType, completionTime));
     }
 
-    private void recordServiceStartTime(Survivor survivor) {
-        double currentTime = Clock.getInstance().getClock();
-        double waitingTime = currentTime - survivor.getCampArrivalTime();
-        survivor.addWaitingTime(waitingTime);
-        if (waitingTime > maxWaitingTimeObserved) maxWaitingTimeObserved = waitingTime;
-        if (waitingTime > localMaxWaitingTime) localMaxWaitingTime = waitingTime;
+    /**
+     * Called by the engine when a completion event for this service point fires.
+     * Returns the survivor that just finished (or null if none).
+     */
+    public Survivor removeSurvivorFromQueue() {
+        if (busyWorkers <= 0) return null;
+        busyWorkers--;
 
-        switch (scheduledEventType) {
-            case MEDICAL_TREATMENT_COMPLETE:
-                survivor.setMedicalTreatmentStartTime(currentTime);
-                break;
-            case REGISTRATION_COMPLETE:
-                survivor.setRegistrationStartTime(currentTime);
-                break;
-            case COMMUNICATION_SERVICE_COMPLETE:
-                survivor.setCommunicationServiceStartTime(currentTime);
-                break;
-            case SUPPLIES_DISTRIBUTION_COMPLETE:
-                survivor.setSuppliesDistributionStartTime(currentTime);
-                break;
-            case ACCOMMODATION_CENTER_COMPLETE:
-                survivor.setAccommodationCenterStartTime(currentTime);
-                break;
-            case CHILD_SHELTER_ASSIGNMENT_COMPLETE:
-                survivor.setChildShelterAssignmentStartTime(currentTime);
-                survivor.assignTemporaryHome();   // assign 50/50
-                appendAssignmentCsvRow(survivor);
-                break;
-            case ADULT_SHELTER_ASSIGNMENT_COMPLETE:
-                survivor.setAdultShelterAssignmentStartTime(currentTime);
-                survivor.assignTemporaryHome();   // assign 40/30/30
-                appendAssignmentCsvRow(survivor);
-                break;
-            default:
-                break;
+        Survivor finished = queue.poll();
+        if (finished != null) {
+            totalServed++;
         }
+        return finished;
     }
 
-    private void appendAssignmentCsvRow(Survivor s) {
-        try {
-            boolean exists = Files.exists(ASSIGNMENT_CSV);
-            try (BufferedWriter out = Files.newBufferedWriter(
-                    ASSIGNMENT_CSV, StandardCharsets.UTF_8,
-                    StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
+    /* ------------ Statistics getters (used by views) ------------ */
 
-                if (!exists) {
-                    out.write(Survivor.csvHeader());
-                    out.newLine();
-                }
-                out.write(s.toCsvRow());
-                out.newLine();
-            }
-        } catch (IOException e) {
-            System.err.println("CSV write failed: " + e.getMessage());
-        }
+    /** Total survivors whose service finished at this point. */
+    public int getTotalServed() { return totalServed; }
+
+    /** Average service time for completed services (minutes). */
+    public double getAverageServiceTime() {
+        return totalServed > 0 ? (sumServiceTime / totalServed) : 0.0;
     }
 
-    private void updateMaximumQueueLength() {
-        if (survivorQueue.size() > maximumQueueLength) {
-            maximumQueueLength = survivorQueue.size();
-        }
-    }
-
-    // === FIXED methods ===
-    public boolean isServiceInProgress() { return serviceInProgress; }
-    public boolean hasSurvivorsInQueue() { return !survivorQueue.isEmpty(); }
-    public int getCurrentQueueLength() { return survivorQueue.size(); }  // ✅ added
-
-    // Getters
-    public String getServicePointName() { return servicePointName; }
-    public int getTotalSurvivorsServed() { return totalSurvivorsServed; }
-    public double getAverageServiceTime() { return totalSurvivorsServed > 0 ? cumulativeServiceTime / totalSurvivorsServed : 0; }
-    public int getMaximumQueueLength() { return maximumQueueLength; }
-    public double getCumulativeServiceTime() { return cumulativeServiceTime; }
-    public double getCumulativeWaitingTime() { return cumulativeWaitingTime; }
-    public int getTotalServed() { return totalSurvivorsServed; }
-    public double getMaxWaitingTime() { return maxWaitingTimeObserved; }
-    public double getLocalMaxWaitingTime() { return localMaxWaitingTime; }
+    /** Maximum observed waiting time in this queue (minutes). */
+    public double getMaxWaitingTime() { return maxWaitingTime; }
 }
